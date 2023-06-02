@@ -3,5 +3,5 @@ node_modules/
 unpackage/
 dist/
 VIDEO-UPLOAD
-test.md
+test/modules
 package-lock.json
