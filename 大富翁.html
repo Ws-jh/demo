@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大富翁动画</title>
+</head>
+<style>
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100vw;
+        height: 100vh;
+    }
+    .map {
+        position: relative;
+        width: 2000px;
+        height: 2000px;
+    }
+    .player {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100px;
+        height: 200px;
+        background: pink;
+        border-top: 10px solid green;
+        border-bottom: 10px solid red;
+        box-sizing: border-box;
+        /* animation: walk 1s forwards; */
+    }
+</style>
+<body>
+    <div class="map">
+        <canvas id="canvas" style="position: absolute;top:0;left:0;right:0;bottom:0;margin: auto;"></canvas>
+        <div id="player" class="player" style="top:-200px;left:-50px;"></div>
+    </div>
+    <button id="btn" style="position:absolute; width: 200px;height: 200px;font-size: 30px;">跳跃</button>
+</body>
+<script>
+    let animationIdx = 0    // 需要执行的第几个动画
+    let step = 0     // 需要行走的步数
+    let direction = 'forward' // 判断行走的方向
+    let className = '' // 动画class
+
+    let mapInfo = [] // 地图上所有的坐标信息
+
+    var btn = document.getElementById('btn');
+    var player = document.getElementById('player');
+
+    btn.addEventListener('click', () => {
+        const getRandomNumber = () => {
+            let randomNumber = 0;
+            while (randomNumber === 0) {
+                randomNumber = Math.floor(Math.random() * 13) - 6;
+            }
+            return randomNumber;
+        }
+        step = getRandomNumber()
+        console.log('行走步数', step)
+
+        direction = step > 0 ? 'forward' : 'back' // 确定方向
+        step = Math.abs(step)
+        // 判断前进还是后退
+        if (direction === 'forward') {
+            animationIdx = animationIdx > mapInfo.length - 1 ? 0 : animationIdx + 1
+            className = 'walk'
+        } else {
+            animationIdx = animationIdx <= 0 ? mapInfo.length - 1 : animationIdx - 1
+            className = 'back'
+        }
+        player.classList.add(className+animationIdx)
+    })
+    player.addEventListener('animationend', () => {
+        player.classList.remove(className+animationIdx)
+
+        // 动画执行完毕需要改动角色人物的位置
+        step--
+        if (step > 0) {
+            if (direction === 'forward') {
+                animationIdx = animationIdx >= mapInfo.length - 1 ? 0 : animationIdx + 1
+            } else {
+                animationIdx = animationIdx === 0 ? mapInfo.length - 1 : animationIdx - 1
+            }
+            console.log('animationIdx', animationIdx)
+            player.classList.add(className+animationIdx)
+        } else {
+            const x = mapInfo[animationIdx][0]
+            const y = mapInfo[animationIdx][1]
+            player.style.top = `${-200 + y * 400}px`
+            player.style.left = `${-50 + x * 400}px`
+            player.classList.remove(className+animationIdx)
+        }
+    })
+
+    window.onload = function () {
+        setCanvas()
+        mapInfo = getMap()
+        const location = getRandomLocation(mapInfo)
+        // 设置角色的初始位置
+        player.style.top = `${-200 + location.y * 400}px`
+        player.style.left = `${-50 + location.x * 400}px`
+
+        start = location.start
+    }
+
+    // 地图上所有的坐标点
+    function getMap() {
+        return [
+            [0, 0], [1, 0], [2, 0], [3, 0], [4, 0],
+            [5, 0], [5, 1], [5, 2], [5, 3], [5, 4],
+            [5, 5], [4, 5], [3, 5], [2, 5], [1, 5],
+            [0, 5], [0, 4], [0, 3], [0, 2], [0, 1]
+        ]
+    }
+
+    function getRandomLocation(mapInfo) {
+        if (!Array.isArray(mapInfo)) throw new Error('mapInfo需要是地图左右坐标的集合')
+
+        // 创建出所有人物行走用到的 css 动画，并把其添加至 style 标签中
+        let animationStyle = ``
+        mapInfo.forEach((step, index) => {
+            const start = step
+            const nextIdx = index + 1 > mapInfo.length - 1 ? 0 : index + 1
+            const next = mapInfo[nextIdx]
+            const preIdx = index - 1 >= 0 ? index - 1 : mapInfo.length - 1
+            const pre = mapInfo[preIdx]
+
+            // 前进时的样式
+            const start_top = -200 + start[1] * 400
+            const start_left = -50 + start[0] * 400            
+            const end_top = -200 + next[1] * 400
+            const end_left = -50 + next[0] * 400
+            let middle_top = 0
+            let middle_left = 0
+            if (start_top === end_top && end_left > start_left) {
+                middle_top = end_top - 200
+                middle_left = end_left - 200
+            } else if (start_top === end_top && end_left < start_left) {
+                middle_top = end_top - 200
+                middle_left = start_left - 200
+            } else if (end_left === start_left && end_top > start_top) {
+                middle_top = start_top - 200
+                middle_left = end_left
+            }else {
+                middle_top = end_top - 200
+                middle_left = end_left
+            }
+
+            // 后退样式
+            const back_top = -200 + pre[1] * 400
+            const back_left = -50 + pre[0] * 400
+
+            const keyframes = `
+                .walk${nextIdx} {
+                    animation: walk${nextIdx} .5s forwards;
+                }
+                @keyframes walk${nextIdx} {
+                    0% {
+                        top: ${start_top}px;
+                        left: ${start_left}px;
+                        transform: rotate(0deg);
+                    }
+                    50% {
+                        top: ${middle_top}px;
+                        left: ${middle_left}px;
+                        transform: rotate(1800deg);
+                    }
+                    100% {
+                        top: ${end_top}px;
+                        left: ${end_left}px;
+                        transform: rotate(360deg);
+                    }
+                }
+                .back${preIdx} {
+                    animation: back${preIdx} .5s forwards;
+                }
+                @keyframes back${preIdx} {
+                    0% {
+                        top: ${start_top}px;
+                        left: ${start_left}px;
+                        transform: rotate(0deg);
+                    }
+                    100% {
+                        top: ${back_top}px;
+                        left: ${back_left}px;
+                        transform: rotate(360deg);
+                    }
+                }
+            `
+            animationStyle += keyframes
+        })
+        // console.log('animationStyle', animationStyle)
+        // 创建 style 标签
+        const style = document.createElement('style')
+        style.type = 'text/css'
+        const textNode = document.createTextNode(animationStyle.trim())
+        style.appendChild(textNode)
+        document.body.append(style)
+
+        const len = mapInfo.length - 1
+        const start = getRandom(0, len-1)
+        return {
+            x: mapInfo[start][0],
+            y: mapInfo[start][1],
+            start
+        }
+    }
+    function setCanvas() {
+        const canvas = document.getElementById('canvas');
+        const width = canvas.width = 2000
+        const height = canvas.height = 2000
+        const count_x = 5
+        const count_y = 5
+
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = 'rgb(200, 200, 200)';
+        ctx.fillRect(0, 0, width, height);
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i <= count_y; i++) {
+            const x_y = i * height / count_y
+            ctx.moveTo(0, x_y);
+            ctx.lineTo(width, x_y);
+            ctx.moveTo(x_y, 0)
+            ctx.lineTo(x_y, height);
+        }
+        ctx.stroke();
+    }
+
+    // 获取随机数
+    function getRandom(min, max) {
+        return Math.floor(Math.random() * (max - min) + min);
+    }
+</script>
+</html>
